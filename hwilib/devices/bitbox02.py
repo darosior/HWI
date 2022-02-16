@@ -416,10 +416,16 @@ class Bitbox02Client(HardwareWalletClient):
         our_xpub_index = None
         our_account_keypath = None
 
+        print(
+            f"Looking for device fingerprint {device_fingerprint.hex()} in origin in {[o.to_string() for o in list(origin_infos.values())]}"
+        )
+
         xpubs: List[bytes] = []
         for i, (xpub, keyinfo) in builtins.enumerate(origin_infos.items()):
             xpubs.append(xpub)
+            print(f" For xpub {i} ({keyinfo.to_string()}): {device_fingerprint == keyinfo.fingerprint} -- {bool(keyinfo.path)}")
             if device_fingerprint == keyinfo.fingerprint and keyinfo.path:
+                print(f"        Comparing {self._get_xpub(keyinfo.path)} and {base58.b58encode_check(xpub)}")
                 if _xpubs_equal_ignoring_version(
                     base58.b58decode_check(self._get_xpub(keyinfo.path)), xpub
                 ):
@@ -578,6 +584,8 @@ class Bitbox02Client(HardwareWalletClient):
             redeem_script: bytes,
             witness_script: bytes,
         ) -> bitbox02.btc.BTCScriptConfigWithKeypath:
+            print("Getting the script config")
+
             if is_p2pkh(output.scriptPubKey):
                 raise BadArgumentError(
                     "The BitBox02 does not support legacy p2pkh scripts"
@@ -684,6 +692,7 @@ class Bitbox02Client(HardwareWalletClient):
                     "The bip44 account index must be the same for all inputs and changes"
                 )
 
+            print("Just before getting the script config")
             script_config_index = add_script_config(
                 script_config_from_utxo(
                     utxo, keypath, psbt_in.redeem_script, psbt_in.witness_script
@@ -719,6 +728,8 @@ class Bitbox02Client(HardwareWalletClient):
                     },
                 }
             )
+
+        print("All inputs done")
 
         outputs: List[bitbox02.BTCOutputType] = []
 
