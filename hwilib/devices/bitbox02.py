@@ -583,6 +583,7 @@ class Bitbox02Client(HardwareWalletClient):
             keypath: Sequence[int],
             redeem_script: bytes,
             witness_script: bytes,
+            keys_origins=None,
         ) -> bitbox02.btc.BTCScriptConfigWithKeypath:
             print("Getting the script config")
 
@@ -610,13 +611,15 @@ class Bitbox02Client(HardwareWalletClient):
                 multisig = parse_multisig(witness_script)
                 if multisig:
                     threshold, _ = multisig
+                    if keys_origins is None and psbt.xpub:
+                        keys_origins = psbt.xpub
                     # We assume that all xpubs in the PSBT are part of the multisig. This is okay
                     # since the BitBox02 enforces the same script type for all inputs and
                     # changes. If that should change, we need to find and use the subset of xpubs
                     # corresponding to the public keys in the current multisig script.
                     _, script_config = self._multisig_scriptconfig(
                         threshold,
-                        psbt.xpub,
+                        keys_origins,
                         bitbox02.btc.BTCScriptConfig.Multisig.P2WSH
                         if output.is_p2wsh()
                         else bitbox02.btc.BTCScriptConfig.Multisig.P2WSH_P2SH,
@@ -695,7 +698,7 @@ class Bitbox02Client(HardwareWalletClient):
             print("Just before getting the script config")
             script_config_index = add_script_config(
                 script_config_from_utxo(
-                    utxo, keypath, psbt_in.redeem_script, psbt_in.witness_script
+                    utxo, keypath, psbt_in.redeem_script, psbt_in.witness_script, psbt_in.hd_keypaths
                 )
             )
             inputs.append(
